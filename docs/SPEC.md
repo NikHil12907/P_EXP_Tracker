@@ -256,20 +256,72 @@ When expense $E_{\text{curr}}$ is inserted with `account_last4` and `balance_aft
 
 ---
 
-## 8. Offline & Progressive Web App (PWA) Security
+## 8. UI/UX Architecture & Responsive App Shell
 
-### 8.1 Service Worker Strategy
+The application employs a mobile-first responsive architecture supporting three distinct viewport breakpoints across two adaptive layout patterns. The navigation configuration is defined once in a single centralized array.
+
+### 8.1 Breakpoints & Layout Specifications
+
+#### 1. Mobile Viewport (< 768px)
+- **Navigation**: Persistent bottom navigation bar with 4 primary destinations (Home, Transactions, Charts, Review).
+- **Ergonomics**: Minimum 44x44px touch targets; bottom navigation respects mobile safe area (`env(safe-area-inset-bottom)`).
+- **Action Button**: Floating Action Button (FAB) `+` positioned above the bottom navigation, scoped strictly inside the app shell container (not the viewport window).
+- **Transactions**: Rendered as touch-friendly cards and list rows.
+- **Top Bar**: Minimal header showing logo and user sign-out action.
+
+#### 2. Tablet Viewport (768px – 1023px)
+- **Navigation**: Slim, icon-only vertical rail (64px width) anchored to the left with accessible tooltips on hover/focus.
+- **Header Action**: The floating `+` button is removed; replaced by an explicit "Add expense" button in the top bar.
+- **Content Container**: Centered with a maximum width of 720px (`max-w-3xl`) within the available space.
+
+#### 3. Desktop Viewport (≥ 1024px)
+- **Navigation**: Fixed left sidebar (240px width) featuring:
+  - Header: App brand icon and title ("Expenses").
+  - Navigation list: Nav items with icon + label and prominent active state indicator.
+  - Footer: Authenticated user email display and sign-out button.
+- **Top Header**: Embedded inside the content column. Left side: Page title and breadcrumbs/subtitle. Right side: Primary "Add expense" action button. No floating FAB and no bottom navigation.
+- **Content Container**: Fluid width up to `max-w-[1200px]` centered with consistent 24px–32px padding (`p-6` to `p-8`).
+- **Home Dashboard Desktop Grid**:
+  - **Row 1 (KPI Metrics)**: 4-card responsive grid:
+    1. *This Month's Spend* (₹ total).
+    2. *Today's Spend* (₹ total).
+    3. *Average Per Day* (₹ total divided by elapsed days in month).
+    4. *vs Last Month* (percentage change comparison).
+  - **Row 2 (Split View - 2/3 + 1/3)**:
+    - **Left Column (2/3)**: "Recent transactions" rendered as a full data table with columns: `Merchant`, `Category`, `Payment Mode`, `Date & Time`, and right-aligned `Amount` rendered in tabular numerals (`tabular-nums`).
+    - **Right Column (1/3)**: Stacked utility panels:
+      - *Needs Review Panel*: Unparsed SMS count & active balance gap count with a direct navigation link.
+      - *Spending by Category Panel*: Clean empty-state placeholder awaiting Phase 5 charts (no simulated/fake data).
+- **Transactions Page Desktop Grid**:
+  - Full-width table with sticky header (`thead`).
+  - Integrated toolbar above the table featuring search input and filter chips for category and payment mode.
+
+### 8.2 Design Tokens & Visual Hierarchy
+- **Neutrals**: Tailwind Zinc palette (`zinc-950` background, `zinc-900` cards/rail/sidebar, `zinc-800` borders, `zinc-400` muted text, `zinc-100` headings).
+- **Primary Accent**: Single blue accent (`blue-600` primary, `blue-500` hover, `blue-400` accents).
+- **Spacing Scale**: Consistent 4px multiples (`p-1`, `p-2`, `p-4`, `p-6`, `p-8`).
+- **Typography Scale**: 5 distinct steps (`text-xs`, `text-sm`, `text-base`, `text-xl`, `text-2xl`) using Inter/system fonts.
+- **Monetary Formatting**: Strictly formatted via `Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' })` with Indian lakh/crore digit grouping and `tabular-nums` for alignment.
+- **Empty States**: Clear messaging paired with a useful action button (e.g. *"No transactions recorded yet — Add your first expense"*).
+- **Accessibility**: Visible high-contrast focus rings (`focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2`).
+
+---
+
+## 9. Offline & Progressive Web App (PWA) Security
+
+### 9.1 Service Worker Strategy
 - **Hashed Static Assets Only**: Cache-First strategy applies strictly to `/_next/static/*`, static SVG/PNG icons, and fonts.
 - **Pages & Data**: Network-First strategy.
 - **Strict Financial Isolation**:
   - The Service Worker HTTP Cache API must **NEVER** cache `/api/*`, Supabase REST endpoints, or authentication tokens/cookies.
-- **Offline Data Storage**:
-  - Financial data for offline viewing is cached exclusively in an in-app client-side store (React Query Persister / IndexedDB).
-  - **Sign-Out Purge**: On user sign-out, the in-app offline store is wiped completely.
+
+### 9.2 Offline Data Storage
+- Financial data for offline viewing is cached exclusively in an in-app client-side store (React Query Persister / IndexedDB).
+- **Sign-Out Purge**: On user sign-out, the in-app offline store is wiped completely.
 
 ---
 
-## 9. Row-Level Security (RLS) & Phase 1 Verification
+## 10. Row-Level Security (RLS) & Phase 1 Verification
 
 ### 9.1 Single-Owner RLS Migration Sequence
 1. Supabase project created.
