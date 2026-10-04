@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseSms, paiseToDecimalString } from '@/lib/parser';
+import { parseAmountToPaise, parseIndianDateToUtc } from '@/lib/parser/utils';
+import { matcherRegistry } from '@/lib/parser/matchers';
 import fs from 'fs';
 import path from 'path';
 
@@ -193,6 +195,17 @@ describe('SMS Parser - Pure Matching Engine', () => {
         expect(result.reason).toBe('invalid_date');
       }
     });
+
+    it('should reject impossible times with needs_review: e.g. 25:99', () => {
+      const sms =
+        'Debited Rs 10.00 from a/c X1234 on 17Aug26 25:99 via UPI to TEA STALL. Ref 600000000021.Bal Rs 7000.00. Not you?Call 18004251199 -Federal Bank';
+      const result = parseSms(sms, SENDER);
+
+      expect(result.status).toBe('needs_review');
+      if (result.status === 'needs_review') {
+        expect(result.reason).toBe('invalid_date');
+      }
+    });
   });
 
   describe('Negative Filters (Ignored Messages)', () => {
@@ -286,7 +299,11 @@ describe('SMS Parser - Pure Matching Engine', () => {
         return;
       }
 
-      const { localFixtures } = await import('./fixtures.local');
+      const localFixtureModule: string = './fixtures.local';
+      const importedModule = (await import(/* @vite-ignore */ localFixtureModule)) as {
+        localFixtures?: Array<{ sms: string; sender?: string; expectedStatus: 'parsed' | 'ignored' | 'needs_review' }>;
+      };
+      const localFixtures = importedModule.localFixtures;
       if (!Array.isArray(localFixtures)) return;
 
       for (const fixture of localFixtures) {
@@ -305,5 +322,43 @@ describe('Helper: paiseToDecimalString', () => {
     expect(paiseToDecimalString(10000050)).toBe('100000.50');
     expect(paiseToDecimalString(0)).toBe('0.00');
     expect(paiseToDecimalString(null)).toBeNull();
+    expect(paiseToDecimalString(-1500)).toBe('-15.00');
+  });
+});
+
+describe('Parser Utilities: parseAmountToPaise & parseIndianDateToUtc', () => {
+  it('should handle edge cases in amount parsing', () => {
+    expect(parseAmountToPaise('')).toBeNull();
+    expect(parseAmountToPaise('abc')).toBeNull();
+    expect(parseAmountToPaise('12.34.56')).toBeNull();
+    expect(parseAmountToPaise('12.345')).toBeNull();
+    expect(parseAmountToPaise('100.5')).toBe(10050);
+  });
+
+  it('should handle edge cases in date parsing', () => {
+    expect(parseIndianDateToUtc('invalid', '12:00')).toBeNull();
+    expect(parseIndianDateToUtc('17Xyz26', '12:00')).toBeNull();
+    expect(parseIndianDateToUtc('31Apr26', '12:00')).toBeNull();
+    expect(parseIndianDateToUtc('29Feb26', '12:00')).toBeNull();
+    expect(parseIndianDateToUtc('29Feb28', '12:00')).not.toBeNull();
+    expect(parseIndianDateToUtc('17Aug26', 'invalid')).toBeNull();
+  });
+
+  it('should catch unhandled matcher exceptions and safely return internal_error', () => {
+    const brokenMatcher = {
+      id: 'faulty',
+      name: 'Faulty Matcher',
+      canHandle: () => true,
+      match: () => {
+        throw new Error('Unexpected crash in custom matcher');
+      },
+    };
+    matcherRegistry.unshift(brokenMatcher);
+    try {
+      const result = parseSms('test body', 'TEST');
+      expect(result).toEqual({ status: 'needs_review', reason: 'internal_error' });
+    } finally {
+      matcherRegistry.shift();
+    }
   });
 });
