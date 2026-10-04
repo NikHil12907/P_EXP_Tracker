@@ -39,11 +39,21 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isLoginPage = request.nextUrl.pathname.startsWith('/login');
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api');
+  const pathname = request.nextUrl.pathname;
+
+  // Never intercept static files or internal Next.js assets
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.')
+  ) {
+    return supabaseResponse;
+  }
+
+  const isLoginPage = pathname.startsWith('/login');
 
   // If not logged in and attempting to access protected dashboard routes, redirect to /login
-  if (!user && !isLoginPage && !isApiRoute) {
+  if (!user && !isLoginPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
