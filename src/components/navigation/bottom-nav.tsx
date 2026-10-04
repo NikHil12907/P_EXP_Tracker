@@ -2,30 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Receipt, BarChart3, Inbox } from 'lucide-react';
-
-const NAV_ITEMS = [
-  {
-    label: 'Home',
-    href: '/',
-    icon: Home,
-  },
-  {
-    label: 'Transactions',
-    href: '/transactions',
-    icon: Receipt,
-  },
-  {
-    label: 'Charts',
-    href: '/charts',
-    icon: BarChart3,
-  },
-  {
-    label: 'Review',
-    href: '/review',
-    icon: Inbox,
-  },
-];
+import { NAV_ITEMS } from '@/components/navigation/nav-config';
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -40,7 +17,7 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center min-h-touch min-w-touch py-1 px-3 rounded-xl transition-colors ${
+              className={`flex flex-col items-center justify-center min-h-touch min-w-touch py-1 px-3 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                 isActive
                   ? 'text-blue-500 font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
