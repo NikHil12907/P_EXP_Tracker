@@ -6,6 +6,8 @@
 
 # testing
 /coverage
+tests/fixtures.local.ts
+tests/fixtures.local.*
 
 # next.js
 /.next/
